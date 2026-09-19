@@ -1,0 +1,550 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Choosi</title>
+<style>
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: #0b0b0f; color: #f2f2f5; overflow: hidden;
+    font-family: "Baloo 2", ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    overscroll-behavior: none; touch-action: none;
+  }
+  canvas { position: fixed; inset: 0; width: 100vw; height: 100%; display: block; touch-action: none; }
+  #hint {
+    position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; pointer-events: none; transition: opacity .35s ease; text-align: center; padding-inline: 16px;
+  }
+  #title { font-size: clamp(44px, 14vw, 72px); font-weight: 700; color: #fff; letter-spacing: -0.02em; line-height: 1; }
+  #face { display: inline-block; overflow: visible; }
+  #sub { font-size: 17px; opacity: .55; font-weight: 500; }
+
+  #menu {
+    position: fixed; left: 0; right: 0; top: 0; z-index: 2;
+    padding: calc(env(safe-area-inset-top, 0px) + 18px) 16px 0;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    transition: opacity .3s ease;
+  }
+  body.playing #hint, body.playing #menu { opacity: 0; pointer-events: none; }
+  .seg { position: relative; display: flex; background: #1a1a22; border-radius: 999px; padding: 4px; gap: 2px; }
+  .seg .pill {
+    position: absolute; top: 4px; bottom: 4px; left: 0; width: 0; border-radius: 999px; background: #f2f2f5;
+    transition: transform .38s cubic-bezier(.3,1.25,.5,1), width .38s cubic-bezier(.3,1.25,.5,1);
+  }
+  .seg button {
+    position: relative; display: inline-flex; align-items: center;
+    font: 600 16px/1 "Baloo 2", ui-rounded, system-ui, sans-serif; color: #9a9aab;
+    background: none; border: 0; border-radius: 999px; padding: 10px 16px 8px; cursor: pointer;
+    -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    transition: color .3s ease;
+  }
+  .seg button[aria-pressed="true"] { color: #0b0b0f; }
+  .seg button .n {
+    display: inline-block; overflow: hidden; max-width: 0; opacity: 0; margin-left: 0; padding: 2px 0 1px;
+    border-radius: 999px; background: #0b0b0f; color: #f2f2f5; font-size: 13px; text-align: center;
+    font-variant-numeric: tabular-nums; transform: scale(.6);
+    transition: max-width .35s ease, opacity .25s ease, margin-left .35s ease, padding .35s ease, transform .35s ease;
+  }
+  .seg button.badge .n { max-width: 34px; opacity: 1; margin-left: 6px; padding: 2px 6px 1px; transform: scale(1); }
+  .drawer {
+    display: grid; grid-template-rows: 0fr; opacity: 0; transform: translateY(-8px);
+    transition: grid-template-rows .38s ease, opacity .3s ease, transform .38s ease;
+  }
+  .drawer > div { overflow: hidden; min-height: 0; }
+  .drawer.open { grid-template-rows: 1fr; opacity: 1; transform: none; }
+  .drawer:not(.open) { pointer-events: none; }
+  .val b { display: inline-block; transition: transform .2s ease; }
+  .val b.tick { transform: scale(1.25); }
+  #menu { gap: 0; }
+  .step { display: flex; align-items: center; gap: 14px; min-height: 44px; padding-top: 12px; }
+  @media (prefers-reduced-motion: reduce) { .seg .pill, .seg button .n, .drawer, .val b { transition: none; } }
+  .step button {
+    width: 44px; height: 44px; border-radius: 50%; border: 2px solid #2c2c38; background: none; color: #f2f2f5;
+    font: 600 24px/1 system-ui, sans-serif; cursor: pointer; touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .step button:disabled { opacity: .25; }
+  .step .val { min-width: 118px; text-align: center; font-size: 17px; color: #c9c9d4; }
+  .step .val b { font-size: 26px; color: #fff; font-weight: 700; margin-right: 6px; font-variant-numeric: tabular-nums; }
+  button:focus-visible { outline: 2px solid #35b8ff; outline-offset: 2px; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&display=swap">
+
+<canvas id="c"></canvas>
+<div id="hint">
+  <div id="title">Ch<svg id="face" width="0.5em" height="0.5em" aria-hidden="true"></svg>osi</div>
+  <div id="sub">Everyone put a finger down</div>
+</div>
+<nav id="menu">
+  <div class="seg" role="group" aria-label="Mode">
+    <span class="pill" aria-hidden="true"></span>
+    <button id="m-pick" data-mode="pick">Pick<span class="n"></span></button>
+    <button id="m-groups" data-mode="groups">Groups<span class="n"></span></button>
+    <button id="m-order" data-mode="order">Order<span class="n"></span></button>
+  </div>
+  <div class="drawer" id="drawer"><div>
+    <div class="step" id="step">
+      <button id="minus" aria-label="Less">−</button>
+      <div class="val" id="val"></div>
+      <button id="plus" aria-label="More">+</button>
+    </div>
+  </div></div>
+</nav>
+
+<script>
+(() => {
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  const titleEl = document.getElementById('title');
+  const faceEl = document.getElementById('face');
+  const menuEl = document.getElementById('menu');
+
+  const COLORS = ['#ff5a7a','#ffb020','#3ddc84','#35b8ff','#b56bff','#ff7a3d','#f5e642','#2de0c8','#ff6fd8','#8aa1ff'];
+  const GROUP_COLORS = ['#ff5a7a','#35b8ff','#3ddc84','#ffb020','#b56bff','#2de0c8','#ff7a3d','#ff6fd8','#f5e642','#8aa1ff'];
+  const BG = '#0b0b0f';
+  const WAIT = 2200;        // ms con los dedos quietos antes de elegir
+  const HOLD_SINGLE = 2500; // ms que el resultado se queda congelado tras soltar (1 ganador)
+  const HOLD_MULTI = 4000;  // ídem para varios ganadores, grupos y orden
+  const FADE = 500;         // ms del fundido final
+  const SW = 64;            // zona invisible del interruptor (esquina inferior derecha)
+  const R = 46;
+
+  let W = 0, H = 0;
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize); resize();
+
+  // ---- ajustes (modo y números), recordados en este móvil ----
+  const LIMITS = { pick: [1, 5], groups: [2, 5] };
+  let settings = { mode: 'pick', pick: 1, groups: 2 };
+  try { Object.assign(settings, JSON.parse(localStorage.getItem('choosi-s') || '{}')); } catch (e) {}
+  if (!['pick', 'groups', 'order'].includes(settings.mode)) settings.mode = 'pick';
+  function save() { try { localStorage.setItem('choosi-s', JSON.stringify(settings)); } catch (e) {} }
+
+  // Las opciones (− número +) solo se despliegan al pulsar el modo que ya está activo.
+  let expanded = false;
+  function renderMenu() {
+    const m = settings.mode;
+    if (m === 'order') expanded = false; // "Order" no tiene opciones
+    for (const b of menuEl.querySelectorAll('[data-mode]')) {
+      const active = b.dataset.mode === m;
+      b.setAttribute('aria-pressed', active);
+      b.setAttribute('aria-expanded', active && expanded);
+      b.classList.toggle('badge', active && !expanded && m !== 'order');
+      if (active && m !== 'order') b.querySelector('.n').textContent = settings[m];
+    }
+    followPill();
+    const val = document.getElementById('val');
+    document.getElementById('drawer').classList.toggle('open', expanded);
+    if (!expanded) return;
+    const n = settings[m], [lo, hi] = LIMITS[m];
+    document.getElementById('minus').disabled = n <= lo;
+    document.getElementById('plus').disabled = n >= hi;
+    val.innerHTML = m === 'pick'
+      ? `<b>${n}</b>${n === 1 ? 'winner' : 'winners'}`
+      : `<b>${n}</b>per group`;
+  }
+  for (const b of menuEl.querySelectorAll('[data-mode]')) {
+    b.addEventListener('click', () => {
+      if (settings.mode === b.dataset.mode) expanded = !expanded;
+      else { settings.mode = b.dataset.mode; expanded = false; save(); }
+      renderMenu();
+    });
+  }
+  function bump(d) {
+    const m = settings.mode; if (m === 'order') return;
+    const [lo, hi] = LIMITS[m];
+    settings[m] = Math.max(lo, Math.min(hi, settings[m] + d)); save(); renderMenu();
+    const b = document.querySelector('#val b');
+    if (b) { b.classList.add('tick'); setTimeout(() => b.classList.remove('tick'), 150); }
+  }
+
+  // La pastilla blanca se desliza hasta el modo activo y sigue su ancho mientras cambia.
+  const pill = menuEl.querySelector('.pill');
+  let followUntil = 0;
+  function placePill() {
+    const b = menuEl.querySelector('[aria-pressed="true"]');
+    if (!b) return;
+    pill.style.transform = `translateX(${b.offsetLeft}px)`;
+    pill.style.width = b.offsetWidth + 'px';
+  }
+  function followPill() {
+    const start = !followUntil || performance.now() > followUntil;
+    followUntil = performance.now() + 450;
+    placePill();
+    if (start) (function loop() { placePill(); if (performance.now() < followUntil) requestAnimationFrame(loop); })();
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(placePill);
+  window.addEventListener('resize', placePill);
+  // primera colocación sin animación
+  pill.style.transition = 'none';
+  requestAnimationFrame(() => requestAnimationFrame(() => { pill.style.transition = ''; }));
+  document.getElementById('minus').addEventListener('click', () => bump(-1));
+  document.getElementById('plus').addEventListener('click', () => bump(1));
+  renderMenu();
+
+  // dedos mínimos para que haya elección en cada modo
+  function needed() {
+    if (settings.mode === 'pick') return settings.pick + 1;
+    if (settings.mode === 'groups') return settings.groups + 1;
+    return 2;
+  }
+
+  // ---- modo trucado (solo afecta al modo "Pick") ----
+  let rigged = false;
+  try { rigged = localStorage.getItem('chwasi-r') === '1'; } catch (e) {}
+  // La primera "o" del título es una carita :) o ;) dibujada con el mismo tamaño y grosor que la "o" real.
+  function showRigged() {
+    const cs = getComputedStyle(titleEl);
+    const S = 4; // medir a 4x para más precisión
+    const fs = parseFloat(cs.fontSize);
+    const mc = document.createElement('canvas');
+    const mx = mc.getContext('2d');
+    const font = `${cs.fontWeight} ${fs * S}px ${cs.fontFamily}`;
+    mx.font = font;
+    const m = mx.measureText('o');
+    const L = m.actualBoundingBoxLeft, Rr = m.actualBoundingBoxRight;
+    const A = m.actualBoundingBoxAscent, D = m.actualBoundingBoxDescent;
+    let w = (L + Rr) / S, h = (A + D) / S, th = fs * 0.12;
+    const lsb = -L / S, rsb = (m.width - Rr) / S;
+    if (w > 0 && h > 0) {
+      // grosor del trazo: escanear la fila central del glifo
+      mc.width = Math.ceil(L + Rr + 8); mc.height = Math.ceil(A + D + 8);
+      mx.font = font; mx.fillStyle = '#000';
+      mx.fillText('o', 4 + L, 4 + A);
+      const row = Math.round(4 + (A + D) / 2);
+      const data = mx.getImageData(0, row, mc.width, 1).data;
+      let x0 = -1, x1 = -1;
+      for (let x = 0; x < mc.width; x++) {
+        const on = data[x * 4 + 3] > 127;
+        if (on && x0 < 0) x0 = x;
+        if (!on && x0 >= 0) { x1 = x; break; }
+      }
+      if (x0 >= 0 && x1 > x0) th = (x1 - x0) / S;
+    } else { w = fs * 0.5; h = fs * 0.52; }
+
+    const ls = parseFloat(cs.letterSpacing) || 0;
+    faceEl.setAttribute('width', w); faceEl.setAttribute('height', h);
+    faceEl.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    faceEl.style.marginLeft = lsb + 'px';
+    faceEl.style.marginRight = (rsb + ls) + 'px';
+    faceEl.style.verticalAlign = (-D / S) + 'px';
+
+    th *= 0.72; // aro un poco más fino para que quepa la cara (mismo tamaño exterior)
+    const cx = w / 2, cy = h / 2, rx = (w - th) / 2, ry = (h - th) / 2;
+    const ri = Math.min(rx, ry) - th / 2;           // radio del hueco interior
+    const ex = ri * 0.4, ey = cy - ri * 0.26, er = Math.max(1, ri * 0.14);
+    const sw = Math.max(1, ri * 0.15);
+    const smile = `M${cx - ri * 0.52} ${cy + ri * 0.12} Q${cx} ${cy + ri * 0.78} ${cx + ri * 0.52} ${cy + ri * 0.12}`;
+    const rightEye = rigged
+      ? `<path d="M${cx + ex - er * 1.4} ${ey + er * 0.2} Q${cx + ex} ${ey - er * 1.1} ${cx + ex + er * 1.4} ${ey + er * 0.2}" fill="none" stroke="#fff" stroke-width="${sw}" stroke-linecap="round"/>`
+      : `<circle cx="${cx + ex}" cy="${ey}" r="${er}" fill="#fff"/>`;
+    faceEl.innerHTML =
+      `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="#fff" stroke-width="${th}"/>` +
+      `<circle cx="${cx - ex}" cy="${ey}" r="${er}" fill="#fff"/>` + rightEye +
+      `<path d="${smile}" fill="none" stroke="#fff" stroke-width="${sw}" stroke-linecap="round"/>`;
+  }
+  showRigged();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(showRigged);
+  window.addEventListener('resize', showRigged);
+
+  // ---- estado de la ronda ----
+  let fingers, phase, lastChange, chosenAt, releasedAt, resetTimer, colorIdx, result;
+  function reset() {
+    clearTimeout(resetTimer);
+    fingers = new Map();       // id -> {x,y,color,born,seen}
+    phase = 'idle';            // idle | waiting | chosen
+    lastChange = 0; chosenAt = 0; releasedAt = 0; resetTimer = null;
+    result = null;             // qué ha salido en esta ronda
+    colorIdx = Math.floor(Math.random() * COLORS.length);
+    document.body.classList.remove('playing');
+  }
+  reset();
+
+  function nextColor() {
+    const used = new Set([...fingers.values()].map(f => f.color));
+    for (let i = 0; i < COLORS.length; i++) {
+      const c = COLORS[(colorIdx + i) % COLORS.length];
+      if (!used.has(c)) { colorIdx = (colorIdx + i + 1) % COLORS.length; return c; }
+    }
+    return COLORS[colorIdx++ % COLORS.length];
+  }
+
+  function buzz(p) { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} }
+
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+
+  function choose() {
+    const ids = shuffle([...fingers.keys()]);
+    const m = settings.mode;
+    if (m === 'pick' && settings.pick === 1) {
+      let id = ids[0];
+      if (rigged) { // truco: el más cercano a la esquina superior izquierda
+        let best = Infinity;
+        for (const [k, f] of fingers) { const d = f.x * f.x + f.y * f.y; if (d < best) { best = d; id = k; } }
+      }
+      const f = fingers.get(id);
+      result = { type: 'single', id, color: f.color, pos: { x: f.x, y: f.y } };
+    } else if (m === 'pick') {
+      // con el truco: los N más cercanos a la esquina superior izquierda
+      const order = rigged
+        ? [...fingers.entries()].sort((a, b) => (a[1].x ** 2 + a[1].y ** 2) - (b[1].x ** 2 + b[1].y ** 2)).map(e => e[0])
+        : ids;
+      result = { type: 'multi', winners: new Set(order.slice(0, settings.pick)) };
+    } else if (m === 'groups') {
+      const size = settings.groups, group = new Map();
+      ids.forEach((id, i) => group.set(id, Math.floor(i / size)));
+      result = { type: 'groups', group };
+    } else {
+      const rank = new Map();
+      ids.forEach((id, i) => rank.set(id, i + 1));
+      result = { type: 'order', rank };
+    }
+    // foto de todos los dedos: el resultado se queda aunque levanten la mano
+    result.snap = new Map();
+    for (const [id, f] of fingers) result.snap.set(id, { x: f.x, y: f.y, color: f.color });
+    result.hold = result.type === 'single' ? HOLD_SINGLE : HOLD_MULTI;
+    chosenAt = performance.now();
+    phase = 'chosen';
+    buzz([40, 60, 120]);
+  }
+
+  // Tras cada evento, la lista real de dedos en pantalla (e.touches) manda:
+  // cualquier dedo que ya no esté se borra, así no quedan dedos "fantasma".
+  function sync(liveIds) {
+    let removed = false;
+    for (const id of [...fingers.keys()]) {
+      if (!liveIds.has(id)) { fingers.delete(id); removed = true; }
+    }
+    const now = performance.now();
+    if (phase === 'chosen') {
+      if (fingers.size === 0 && !resetTimer) {
+        releasedAt = now;
+        resetTimer = setTimeout(reset, result.hold + FADE);
+      }
+      return;
+    }
+    if (removed) lastChange = now;
+    phase = fingers.size >= needed() ? 'waiting' : 'idle';
+    document.body.classList.toggle('playing', fingers.size > 0);
+    if (fingers.size > 0 && expanded) { expanded = false; renderMenu(); }
+  }
+
+  function idsOf(list) { const s = new Set(); for (const t of list) s.add(t.identifier); return s; }
+  // Los toques sobre el menú son para los botones, no dedos de juego.
+  function onMenu(e) {
+    return !document.body.classList.contains('playing') && e.target && e.target.closest && e.target.closest('#menu');
+  }
+
+  const taps = new Map();
+  let lastCornerTap = 0;
+
+  function onStart(e) {
+    if (onMenu(e) && fingers.size === 0) return;
+    e.preventDefault();
+    const now = performance.now();
+    // con el resultado congelado, un toque nuevo lo cierra (pasado un momento, para no cerrarlo sin querer)
+    if (phase === 'chosen' && fingers.size === 0 && releasedAt && now - releasedAt > 700) { reset(); return; }
+    for (const t of e.changedTouches) {
+      // candidato a toque del interruptor: único dedo, pantalla vacía, en la esquina inferior derecha
+      taps.set(t.identifier, {
+        start: now,
+        corner: phase === 'idle' && fingers.size === 0 && e.touches.length === 1 &&
+                t.clientX > W - SW && t.clientY > H - SW
+      });
+      if (e.touches.length > 1) for (const v of taps.values()) v.corner = false;
+      if (phase === 'chosen') continue; // esperando a que suelten todos
+      fingers.set(t.identifier, { x: t.clientX, y: t.clientY, color: nextColor(), born: now, seen: now });
+      lastChange = now;
+      buzz(10);
+    }
+    sync(idsOf(e.touches));
+  }
+
+  function onMove(e) {
+    if (onMenu(e) && fingers.size === 0) return;
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      const f = fingers.get(t.identifier);
+      if (!f) continue;
+      f.x = t.clientX; f.y = t.clientY; f.seen = performance.now();
+      if (result && result.type === 'single' && t.identifier === result.id) result.pos = { x: f.x, y: f.y };
+      if (result && result.snap.has(t.identifier)) Object.assign(result.snap.get(t.identifier), { x: f.x, y: f.y });
+    }
+    // cualquier movimiento de los demás dedos trae la lista real: aprovechar para limpiar
+    sync(idsOf(e.touches));
+  }
+
+  // Interruptor secreto: DOBLE toque rápido en la esquina inferior derecha con la pantalla vacía.
+  function onEnd(e) {
+    if (onMenu(e) && fingers.size === 0) return;
+    e.preventDefault();
+    const now = performance.now();
+    for (const t of e.changedTouches || []) {
+      const info = taps.get(t.identifier);
+      taps.delete(t.identifier);
+      if (!info || !info.corner || now - info.start > 300) continue;
+      if (now - lastCornerTap < 500) {
+        lastCornerTap = 0;
+        rigged = !rigged;
+        try { localStorage.setItem('chwasi-r', rigged ? '1' : '0'); } catch (err) {}
+        showRigged();
+        buzz(rigged ? [20, 40, 20] : 30);
+      } else {
+        lastCornerTap = now;
+      }
+    }
+    sync(idsOf(e.touches));
+  }
+
+  // Escuchar en todo el documento (no solo el lienzo) para no perder ningún "soltar".
+  document.addEventListener('touchstart', onStart, { passive: false, capture: true });
+  document.addEventListener('touchmove', onMove, { passive: false, capture: true });
+  document.addEventListener('touchend', onEnd, { passive: false, capture: true });
+  document.addEventListener('touchcancel', onEnd, { passive: false, capture: true });
+
+  // Segunda vía de detección: los eventos "pointer". Si un dedo se levanta y el evento
+  // táctil normal no llega, se borra el círculo que estaba justo en ese punto.
+  function onPointerUp(e) {
+    if (e.pointerType !== 'touch') return;
+    const x = e.clientX, y = e.clientY, at = performance.now();
+    setTimeout(() => {
+      let bestId = null, bestD = 32 * 32;
+      for (const [id, f] of fingers) {
+        if (f.seen > at) continue;
+        const d = (f.x - x) ** 2 + (f.y - y) ** 2;
+        if (d < bestD) { bestD = d; bestId = id; }
+      }
+      if (bestId === null) return;
+      const live = new Set(fingers.keys()); live.delete(bestId);
+      sync(live);
+    }, 120);
+  }
+  document.addEventListener('pointerup', onPointerUp, true);
+  document.addEventListener('pointercancel', onPointerUp, true);
+  document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('visibilitychange', () => { if (document.hidden) reset(); });
+
+  // Ratón (solo para probar en ordenador: un único "dedo")
+  let mouseDown = false;
+  cv.addEventListener('mousedown', e => {
+    mouseDown = true;
+    onStart({ preventDefault(){}, target: cv, changedTouches: [{ identifier: 'm', clientX: e.clientX, clientY: e.clientY }],
+              touches: [{ identifier: 'm' }] });
+  });
+  window.addEventListener('mousemove', e => {
+    if (mouseDown) onMove({ preventDefault(){}, target: cv, changedTouches: [{ identifier: 'm', clientX: e.clientX, clientY: e.clientY }], touches: [{ identifier: 'm' }] });
+  });
+  window.addEventListener('mouseup', () => {
+    if (!mouseDown) return; mouseDown = false;
+    onEnd({ preventDefault(){}, target: cv, touches: [] });
+  });
+
+  // ---- dibujo ----
+  function circle(x, y, r, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(x, y, Math.max(1, r), 0, Math.PI * 2); ctx.fill();
+  }
+  function ring(x, y, r, color, w) {
+    ctx.strokeStyle = color; ctx.lineWidth = w;
+    ctx.beginPath(); ctx.arc(x, y, Math.max(1, r), 0, Math.PI * 2); ctx.stroke();
+  }
+  function label(x, y, text, size) {
+    ctx.fillStyle = BG;
+    ctx.font = `700 ${size}px "Baloo 2", ui-rounded, system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, x, y + size * 0.06);
+  }
+
+  function drawFinger(f, t, progress) {
+    const age = Math.max(0, Math.min(1, (t - f.born) / 220));
+    const pop = 1 - Math.pow(1 - age, 3);
+    const pulse = 1 + 0.06 * Math.sin(t / 140 + f.born);
+    const r = Math.max(1, R * pop * pulse);
+    circle(f.x, f.y, r, f.color);
+    ctx.strokeStyle = f.color; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    if (progress > 0) {
+      const a0 = -Math.PI / 2 + t / 400;
+      ctx.beginPath(); ctx.arc(f.x, f.y, r + 16, a0, a0 + Math.PI * 2 * progress); ctx.stroke();
+    } else {
+      ctx.globalAlpha = 0.35; ring(f.x, f.y, r + 16, f.color, 6); ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawResult(t) {
+    const k = Math.min(1, (t - chosenAt) / 650);
+    const e = 1 - Math.pow(1 - k, 4);
+    const fade = releasedAt ? Math.max(0, Math.min(1, 1 - (t - releasedAt - result.hold) / FADE)) : 1;
+    const pulse = 1 + 0.07 * Math.sin(t / 130);
+    ctx.globalAlpha = fade;
+
+    if (result.type === 'single') {
+      const { x, y } = result.pos;
+      const maxR = Math.hypot(Math.max(x, W - x), Math.max(y, H - y));
+      ctx.fillStyle = result.color; ctx.fillRect(0, 0, W, H);
+      circle(x, y, maxR * (1 - e) + (R + 34) * e, BG);
+      circle(x, y, R * pulse, result.color);
+    } else if (result.type === 'multi') {
+      for (const [id, f] of result.snap) {
+        if (result.winners.has(id)) {
+          circle(f.x, f.y, R * (1 + 0.15 * e) * pulse, f.color);
+          ring(f.x, f.y, (R + 22) * (1 + 0.25 * e), f.color, 7);
+        } else {
+          ctx.globalAlpha = fade * (1 - e);
+          circle(f.x, f.y, R * (1 - 0.6 * e), f.color);
+          ctx.globalAlpha = fade;
+        }
+      }
+    } else if (result.type === 'groups') {
+      for (const [id, f] of result.snap) {
+        const g = result.group.get(id);
+        if (g === undefined) continue;
+        const col = GROUP_COLORS[g % GROUP_COLORS.length];
+        circle(f.x, f.y, R * (1 + 0.15 * e) * pulse, col);
+        ring(f.x, f.y, (R + 20) * (1 + 0.2 * e), col, 6);
+        label(f.x, f.y, String(g + 1), 40);
+      }
+    } else if (result.type === 'order') {
+      for (const [id, f] of result.snap) {
+        const n = result.rank.get(id);
+        if (n === undefined) continue;
+        circle(f.x, f.y, R * (1 + 0.15 * e) * pulse, f.color);
+        ring(f.x, f.y, (R + 20) * (1 + 0.2 * e), f.color, 6);
+        label(f.x, f.y, String(n), 44);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function render(t) {
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = BG;
+    ctx.fillRect(0, 0, W, H);
+
+    if (phase === 'waiting' && fingers.size >= needed() && t - lastChange >= WAIT) choose();
+
+    if (phase === 'chosen') {
+      // seguridad: nunca se queda pillado en el resultado
+      if (t - chosenAt > 15000) { reset(); return; }
+      drawResult(t);
+    } else {
+      const progress = phase === 'waiting' ? Math.min(1, (t - lastChange) / WAIT) : 0;
+      for (const f of fingers.values()) drawFinger(f, t, progress);
+    }
+  }
+
+  function frame() {
+    try { render(performance.now()); } catch (err) { console.error(err); }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
