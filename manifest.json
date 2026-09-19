@@ -2,6 +2,7 @@
   "name": "Choosi",
   "short_name": "Choosi",
   "description": "Multi-touch random finger picker",
+  "version": "1.4",
   "start_url": "/",
   "scope": "/",
   "display": "fullscreen",
