@@ -1,4 +1,4 @@
-const CACHE = 'choosi-v1.2';
+const CACHE = 'choosi-v1.5';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
