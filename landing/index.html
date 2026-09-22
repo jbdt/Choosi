@@ -13,9 +13,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:#0b0b0f; --surface:#1a1a22; --border:#2c2c38; --text:#f2f2f5; --muted:#9a9aab; --dim:#c9c9d4;
+    --bg:#0b0b0f; --surface:linear-gradient(135deg, #33334a, #14141a); --border:#2c2c38; --text:#f2f2f5; --muted:#9a9aab; --dim:#c9c9d4;
     --c-red:#ff5a7a; --c-amber:#ffb020; --c-green:#3ddc84; --c-blue:#35b8ff; --c-purple:#b56bff;
-    --c-chrome:#ea4335; --c-safari:#1a8cff; --c-teal:#2de0c8;
+    --c-chrome:#ea4335; --c-safari:#1a8cff; --c-teal:#2de0c8; --c-pink:#ff5ac8;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); }
@@ -36,7 +36,7 @@
 
   .wrap { max-width: 780px; margin: 0 auto; padding: 0 32px; position: relative; z-index: 1; }
 
-  .hero { padding: 72px 0 0; text-align: center; }
+  .hero { padding: 32px 0 0; text-align: center; }
   .eyebrow { margin: 0 0 20px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-teal, #2de0c8); }
   h1 { margin: 0; font-size: 72px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
   .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
@@ -67,9 +67,28 @@
     border: 2px solid var(--border); border-radius: 28px; padding: 24px 20px 28px;
     display: flex; flex-direction: column; align-items: center;
   }
-  .mode-card canvas { display: block; width: 100%; aspect-ratio: 460/320; height: auto; border-radius: 20px; }
-  .mode-card .title { margin: 16px 0 2px; font-size: 16px; font-weight: 700; color: var(--text); }
-  .mode-card .desc { margin: 0; font-size: 13px; font-weight: 500; color: var(--muted); }
+  @media (max-width: 899px) {
+    .mode-row { flex-direction: column; align-items: center; }
+    .mode-card { width: 100%; }
+  }
+  .mode-card canvas { display: block; width: 100%; aspect-ratio: 460/320; height: auto; border-radius: 20px; margin: 16px 0 20px; }
+  .mode-card .title {
+    margin: 0 0 6px; font-size: 22px; font-weight: 700; letter-spacing: -0.01em;
+  }
+  .mode-card:nth-child(1) .title {
+    background: linear-gradient(90deg, var(--c-red), var(--c-amber));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  }
+  .mode-card:nth-child(2) .title {
+    background: linear-gradient(90deg, var(--c-blue), var(--c-teal));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  }
+  .mode-card:nth-child(3) .title {
+    background: linear-gradient(90deg, var(--c-purple), var(--c-pink));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;
+  }
+  .mode-card .desc { margin: 0; font-size: 13px; font-weight: 500; color: var(--dim); line-height: 1.4; }
+  .mode-card .usecase { margin: 0; width: 80%; font-size: 12px; font-weight: 500; font-style: italic; color: var(--muted); line-height: 1.4; }
 
   .install { padding: 120px 0 0; }
   .install .lead { margin: 12px 0 0; font-size: 16px; font-weight: 500; color: var(--muted); text-align: center; }
@@ -114,19 +133,22 @@
     <h2>Three ways to decide</h2>
     <div class="mode-row">
       <div class="mode-card">
-        <canvas id="pickCanvas" width="460" height="320"></canvas>
         <p class="title">Pick</p>
-        <p class="desc">One tap, one winner.</p>
+        <p class="desc">Everyone puts a finger on the screen at the same time. Choosi randomly picks one, or more if you need multiple winners.</p>
+        <canvas id="pickCanvas" width="460" height="320"></canvas>
+        <p class="usecase">Perfect for settling who pays, who goes first, or who gets the last slice.</p>
       </div>
       <div class="mode-card">
-        <canvas id="groupsCanvas" width="460" height="320"></canvas>
         <p class="title">Groups</p>
-        <p class="desc">Split into teams instantly.</p>
+        <p class="desc">Put all your fingers down and Choosi instantly splits them into equal teams.</p>
+        <canvas id="groupsCanvas" width="460" height="320"></canvas>
+        <p class="usecase">No arguments, no bias. Great for team games, secret assignments, or anything that needs a fair split.</p>
       </div>
       <div class="mode-card">
-        <canvas id="orderCanvas" width="460" height="320"></canvas>
         <p class="title">Order</p>
-        <p class="desc">Settle who goes first.</p>
+        <p class="desc">Everyone touches the screen and Choosi assigns a random turn order: 1st, 2nd, 3rd, all the way down.</p>
+        <canvas id="orderCanvas" width="460" height="320"></canvas>
+        <p class="usecase">Ideal for board games, presentations, or any time you need to decide who goes when.</p>
       </div>
     </div>
   </section>
@@ -235,16 +257,41 @@
     var ri = rx - th / 2;
     var ex = ri * 0.4, ey = cy - ri * 0.26, er = Math.max(1, ri * 0.14);
     var sw = Math.max(1, ri * 0.15);
-    var smile = 'M' + (cx - ri * 0.52) + ' ' + (cy + ri * 0.12) + ' Q' + cx + ' ' + (cy + ri * 0.78) + ' ' + (cx + ri * 0.52) + ' ' + (cy + ri * 0.12);
+    faceGeom = { cx: cx, cy: cy, rx: rx, ry: ry, th: th, ex: ex, ey: ey, er: er, sw: sw, ri: ri };
+    drawFace(0);
+  }
+  var faceGeom = null;
+  function drawFace(wink) {
+    var g = faceGeom;
+    if (!faceEl || !g) return;
+    var cx = g.cx, cy = g.cy, rx = g.rx, ry = g.ry, th = g.th, ex = g.ex, ey = g.ey, er = g.er, sw = g.sw, ri = g.ri;
+    var smile = 'M' + (cx - ri * 0.52) + ' ' + (cy + ri * 0.12) + ' Q' + cx + ' ' + (cy + ri * (0.78 + wink * 0.22)) + ' ' + (cx + ri * 0.52) + ' ' + (cy + ri * 0.12);
+    var winkRy = er * Math.max(0.06, 1 - wink);
+    var rightEye = wink > 0.08
+      ? '<path d="M' + (cx + ex - er) + ' ' + ey + ' Q' + (cx + ex) + ' ' + (ey + er * 0.6 * wink) + ' ' + (cx + ex + er) + ' ' + ey + '" fill="none" stroke="#fff" stroke-width="' + Math.max(1, sw * 0.55) + '" stroke-linecap="round"></path>'
+      : '<ellipse cx="' + (cx + ex) + '" cy="' + ey + '" rx="' + er + '" ry="' + winkRy + '" fill="#fff"></ellipse>';
     faceEl.innerHTML =
       '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + rx + '" ry="' + ry + '" fill="none" stroke="#fff" stroke-width="' + th + '"></ellipse>' +
       '<circle cx="' + (cx - ex) + '" cy="' + ey + '" r="' + er + '" fill="#fff"></circle>' +
-      '<circle cx="' + (cx + ex) + '" cy="' + ey + '" r="' + er + '" fill="#fff"></circle>' +
+      rightEye +
       '<path d="' + smile + '" fill="none" stroke="#fff" stroke-width="' + sw + '" stroke-linecap="round"></path>';
   }
   measureFace();
   window.addEventListener('resize', measureFace);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(measureFace);
+
+  // Keep the three mode-card descriptions the same height so the canvases
+  // below them always line up, no matter how many lines each text wraps to.
+  var descEls = Array.prototype.slice.call(document.querySelectorAll('.mode-card .desc'));
+  function equalizeDescHeights() {
+    if (!descEls.length) return;
+    descEls.forEach(function (el) { el.style.minHeight = ''; });
+    var maxH = descEls.reduce(function (m, el) { return Math.max(m, el.getBoundingClientRect().height); }, 0);
+    descEls.forEach(function (el) { el.style.minHeight = maxH + 'px'; });
+  }
+  equalizeDescHeights();
+  window.addEventListener('resize', equalizeDescHeights);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(equalizeDescHeights);
 
   // Mode preview animations
   var pickCanvas = document.getElementById('pickCanvas');
@@ -620,7 +667,15 @@
 
   var startTime = performance.now();
   function loop() {
-    var t = ((performance.now() - startTime) / 1000) % 6.8;
+    var elapsed = (performance.now() - startTime) / 1000;
+    var t = elapsed % 6.8;
+    var cycle = elapsed % 4.5;
+    var wink = 0;
+    if (cycle > 3.9 && cycle < 4.3) {
+      var p = (cycle - 3.9) / 0.4;
+      wink = p < 0.5 ? p * 2 : (1 - p) * 2;
+    }
+    drawFace(wink);
     drawMain(t);
     drawGroupsAnim(t);
     drawOrderAnim(t);
