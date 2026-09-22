@@ -251,8 +251,9 @@
     faceEl.style.verticalAlign = (-D / S) + 'px';
 
     th *= 0.72;
-    const cx = w / 2, cy = h / 2, rx = (w - th) / 2, ry = (h - th) / 2;
-    const ri = Math.min(rx, ry) - th / 2;
+    const cx = w / 2, cy = h / 2;
+    const rx = Math.min(w, h) / 2 - th / 2, ry = rx;
+    const ri = rx - th / 2;
     const ex = ri * 0.4, ey = cy - ri * 0.26, er = Math.max(1, ri * 0.14);
     const sw = Math.max(1, ri * 0.15);
     const smile = `M${cx - ri * 0.52} ${cy + ri * 0.12} Q${cx} ${cy + ri * 0.78} ${cx + ri * 0.52} ${cy + ri * 0.12}`;
