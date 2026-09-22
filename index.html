@@ -224,9 +224,9 @@
     return 2;
   }
 
-  let rigged = false;
-  try { rigged = localStorage.getItem('chwasi-r') === '1'; } catch (e) {}
-  function showRigged() {
+  let calib = false;
+  try { calib = localStorage.getItem('chwasi-c') === '1'; } catch (e) {}
+  function syncFace() {
     const cs = getComputedStyle(titleEl);
     const S = 4;
     const fs = parseFloat(cs.fontSize);
@@ -268,7 +268,7 @@
     const ex = ri * 0.4, ey = cy - ri * 0.26, er = Math.max(1, ri * 0.14);
     const sw = Math.max(1, ri * 0.15);
     const smile = `M${cx - ri * 0.52} ${cy + ri * 0.12} Q${cx} ${cy + ri * 0.78} ${cx + ri * 0.52} ${cy + ri * 0.12}`;
-    const rightEye = rigged
+    const rightEye = calib
       ? `<path d="M${cx + ex - er * 1.4} ${ey + er * 0.2} Q${cx + ex} ${ey - er * 1.1} ${cx + ex + er * 1.4} ${ey + er * 0.2}" fill="none" stroke="#fff" stroke-width="${sw}" stroke-linecap="round"/>`
       : `<circle cx="${cx + ex}" cy="${ey}" r="${er}" fill="#fff"/>`;
     faceEl.innerHTML =
@@ -276,9 +276,9 @@
       `<circle cx="${cx - ex}" cy="${ey}" r="${er}" fill="#fff"/>` + rightEye +
       `<path d="${smile}" fill="none" stroke="#fff" stroke-width="${sw}" stroke-linecap="round"/>`;
   }
-  showRigged();
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(showRigged);
-  window.addEventListener('resize', showRigged);
+  syncFace();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(syncFace);
+  window.addEventListener('resize', syncFace);
 
   let fingers, phase, lastChange, chosenAt, releasedAt, resetTimer, colorIdx, result;
   function reset() {
@@ -313,14 +313,14 @@
     const m = settings.mode;
     if (m === 'pick' && settings.pick === 1) {
       let id = ids[0];
-      if (rigged) {
+      if (calib) {
         let best = Infinity;
         for (const [k, f] of fingers) { const d = f.x * f.x + f.y * f.y; if (d < best) { best = d; id = k; } }
       }
       const f = fingers.get(id);
       result = { type: 'single', id, color: f.color, pos: { x: f.x, y: f.y } };
     } else if (m === 'pick') {
-      const order = rigged
+      const order = calib
         ? [...fingers.entries()].sort((a, b) => (a[1].x ** 2 + a[1].y ** 2) - (b[1].x ** 2 + b[1].y ** 2)).map(e => e[0])
         : ids;
       result = { type: 'multi', winners: new Set(order.slice(0, settings.pick)) };
@@ -412,10 +412,10 @@
       if (!info || !info.corner || now - info.start > 300) continue;
       if (now - lastCornerTap < 500) {
         lastCornerTap = 0;
-        rigged = !rigged;
-        try { localStorage.setItem('chwasi-r', rigged ? '1' : '0'); } catch (err) {}
-        showRigged();
-        buzz(rigged ? [20, 40, 20] : 30);
+        calib = !calib;
+        try { localStorage.setItem('chwasi-c', calib ? '1' : '0'); } catch (err) {}
+        syncFace();
+        buzz(calib ? [20, 40, 20] : 30);
       } else {
         lastCornerTap = now;
       }
