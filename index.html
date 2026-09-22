@@ -1,4 +1,15 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!doctype html><html><head><meta charset=utf8>
+<script>
+(function(){
+  try {
+    if (document.cookie.indexOf('choosi_entered=1') !== -1) return;
+    var hasTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+    var isMobileOrTablet = window.matchMedia('(max-width: 1024px)').matches;
+    if (!hasTouch || !isMobileOrTablet) location.replace('/landing/');
+  } catch (e) {}
+})();
+</script>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Choosi</title>
 <meta name="description" content="Multi-touch random finger picker">
 <meta name="theme-color" content="#0b0b0f">
