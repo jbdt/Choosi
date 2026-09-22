@@ -22,6 +22,7 @@
   body {
     color: var(--text); font-family: 'Baloo 2', ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
     min-height: 100vh; position: relative; overflow-x: hidden;
+    -webkit-user-select: none; user-select: none;
   }
   a { color: var(--muted); text-decoration: none; }
   a:hover { color: var(--text); text-decoration: underline; }
@@ -341,7 +342,8 @@
     ctx.beginPath();
     ctx.arc(winner.x, winner.y, 40, 0, Math.PI * 2);
     ctx.stroke();
-    var rippleT = (localT % 0.6) / 0.6;
+    var period = winner.color === '#ff7a3d' ? 1.1 : 0.6;
+    var rippleT = (localT % period) / period;
     var r = 55 + rippleT * 150;
     ctx.globalAlpha = Math.max(0, 1 - rippleT);
     ctx.lineWidth = Math.max(1, 8 * (1 - rippleT));
